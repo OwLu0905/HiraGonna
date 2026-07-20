@@ -1,45 +1,58 @@
 import {
   findKana,
-  GOJUON_COLUMNS,
-  GOJUON_VOWELS,
+  GRID_DEFS,
   HIRAGANA,
+  SET_LABELS,
   type Kana,
+  type KanaSet,
 } from "@/lib/hiragana"
 import { cn } from "@/lib/utils"
-
-const COLUMN_HEADERS = ["a", "k", "s", "t", "n", "h", "m", "y", "r", "w", "ん"]
 
 const kanaN = HIRAGANA.find((h) => h.column === "n-syllabic")!
 
 interface KanaGridProps {
+  set?: KanaSet
   renderKana: (kana: Kana) => React.ReactNode
   className?: string
 }
 
 /**
- * Gojūon layout: consonant columns (行) on the x-axis, vowel rows (段) on the
- * y-axis, plus a final column for the syllabic ん.
+ * Gojūon-style layout for one kana set: consonant columns (行) on the x-axis,
+ * vowel rows (段) on the y-axis; the basic set adds a final column for ん.
  */
-export function KanaGrid({ renderKana, className }: KanaGridProps) {
+export function KanaGrid({ set = "basic", renderKana, className }: KanaGridProps) {
+  const def = GRID_DEFS[set]
+  const columnCount = def.columns.length + (def.includeN ? 1 : 0)
+
   return (
     <div className={cn("overflow-x-auto", className)}>
       <div
         role="table"
-        aria-label="五十音表"
+        aria-label={`五十音表 ${SET_LABELS[set]}`}
         className="grid min-w-max gap-1.5"
-        style={{ gridTemplateColumns: "auto repeat(11, minmax(3.5rem, 1fr))" }}
+        style={{
+          gridTemplateColumns: `auto repeat(${columnCount}, minmax(3.5rem, 1fr))`,
+        }}
       >
         <div role="columnheader" />
-        {COLUMN_HEADERS.map((header) => (
+        {def.headers.map((header, i) => (
           <div
             role="columnheader"
-            key={header}
+            key={def.columns[i]}
             className="pb-1 text-center font-mono text-xs text-muted-foreground"
           >
             {header}
           </div>
         ))}
-        {GOJUON_VOWELS.map((vowel, rowIndex) => (
+        {def.includeN && (
+          <div
+            role="columnheader"
+            className="pb-1 text-center font-mono text-xs text-muted-foreground"
+          >
+            ん
+          </div>
+        )}
+        {def.vowels.map((vowel, rowIndex) => (
           <div role="row" key={vowel} className="contents">
             <div
               role="rowheader"
@@ -47,7 +60,7 @@ export function KanaGrid({ renderKana, className }: KanaGridProps) {
             >
               {vowel}
             </div>
-            {GOJUON_COLUMNS.map((column) => {
+            {def.columns.map((column) => {
               const kana = findKana(column, vowel)
               return kana ? (
                 <div role="cell" key={column}>
@@ -57,11 +70,12 @@ export function KanaGrid({ renderKana, className }: KanaGridProps) {
                 <div role="cell" key={column} aria-hidden />
               )
             })}
-            {rowIndex === 0 ? (
-              <div role="cell">{renderKana(kanaN)}</div>
-            ) : (
-              <div role="cell" aria-hidden />
-            )}
+            {def.includeN &&
+              (rowIndex === 0 ? (
+                <div role="cell">{renderKana(kanaN)}</div>
+              ) : (
+                <div role="cell" aria-hidden />
+              ))}
           </div>
         ))}
       </div>

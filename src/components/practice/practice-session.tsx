@@ -16,7 +16,12 @@ import {
 import { Input } from "@/components/ui/input"
 import { Progress } from "@/components/ui/progress"
 import { SummaryHeatmap } from "@/components/practice/summary-heatmap"
-import { FONT_LABELS, HIRAGANA } from "@/lib/hiragana"
+import {
+  FONT_LABELS,
+  KANA_SETS,
+  SET_LABELS,
+  type KanaSet,
+} from "@/lib/hiragana"
 import { usePracticeStore } from "@/lib/practice-store"
 
 export function PracticeSession() {
@@ -27,8 +32,21 @@ export function PracticeSession() {
   return <QuestionScreen />
 }
 
+const ALL_SETS = Object.keys(SET_LABELS) as KanaSet[]
+
 function StartScreen() {
   const start = usePracticeStore((s) => s.start)
+  const [selected, setSelected] = React.useState<KanaSet[]>(["basic"])
+
+  const deck = ALL_SETS.filter((s) => selected.includes(s)).flatMap(
+    (s) => KANA_SETS[s]
+  )
+
+  function toggle(set: KanaSet) {
+    setSelected((prev) =>
+      prev.includes(set) ? prev.filter((s) => s !== set) : [...prev, set]
+    )
+  }
 
   return (
     <div className="flex flex-1 items-center justify-center">
@@ -36,20 +54,37 @@ function StartScreen() {
         <CardHeader>
           <CardTitle className="text-2xl">平假名練習</CardTitle>
           <CardDescription>
-            一組 {HIRAGANA.length} 個平假名，隨機出題。看字輸入羅馬拼音，
+            選擇要練習的範圍，隨機出題。看字輸入羅馬拼音，
             完成後會依作答時間顯示成績總表。
           </CardDescription>
         </CardHeader>
-        <CardContent>
+        <CardContent className="flex flex-col items-center gap-6">
           <p className="font-mincho text-5xl tracking-widest text-muted-foreground">
             あいうえお
           </p>
+          <div className="flex flex-wrap justify-center gap-2">
+            {ALL_SETS.map((set) => (
+              <Button
+                key={set}
+                size="sm"
+                variant={selected.includes(set) ? "default" : "outline"}
+                aria-pressed={selected.includes(set)}
+                onClick={() => toggle(set)}
+              >
+                {selected.includes(set) && <Check data-icon="inline-start" />}
+                {SET_LABELS[set]}（{KANA_SETS[set].length}）
+              </Button>
+            ))}
+          </div>
         </CardContent>
-        <CardFooter className="justify-center">
-          <Button size="lg" onClick={() => start()}>
+        <CardFooter className="flex-col items-center gap-1.5">
+          <Button size="lg" disabled={deck.length === 0} onClick={() => start({ deck })}>
             <Play data-icon="inline-start" />
-            開始練習
+            開始練習（{deck.length} 題）
           </Button>
+          {deck.length === 0 && (
+            <p className="text-xs text-muted-foreground">請至少選擇一個範圍</p>
+          )}
         </CardFooter>
       </Card>
     </div>

@@ -12,7 +12,12 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { FONT_LABELS, type KanaFont } from "@/lib/hiragana"
+import {
+  FONT_LABELS,
+  SET_LABELS,
+  type KanaFont,
+  type KanaSet,
+} from "@/lib/hiragana"
 
 export function HiraganaChart() {
   const [font, setFont] = React.useState<KanaFont>("kyokasho")
@@ -46,22 +51,30 @@ export function HiraganaChart() {
             </div>
           </div>
         </CardHeader>
-        <CardContent>
-          <KanaGrid
-            renderKana={(kana) => (
-              <div className="flex flex-col items-center gap-0.5 rounded-lg border bg-card px-1 py-2">
-                <span
-                  lang="ja"
-                  className={`text-2xl leading-none ${font === "mincho" ? "font-mincho" : "font-kyokasho"}`}
-                >
-                  {kana.kana}
-                </span>
-                <span className="text-[10px] text-muted-foreground">
-                  {kana.romaji}
-                </span>
-              </div>
-            )}
-          />
+        <CardContent className="flex flex-col gap-6">
+          {(Object.keys(SET_LABELS) as KanaSet[]).map((set) => (
+            <section key={set} className="flex flex-col gap-1.5">
+              <h3 className="text-sm font-medium text-muted-foreground">
+                {SET_LABELS[set]}
+              </h3>
+              <KanaGrid
+                set={set}
+                renderKana={(kana) => (
+                  <div className="flex flex-col items-center gap-0.5 rounded-lg border bg-card px-1 py-2">
+                    <span
+                      lang="ja"
+                      className={`text-2xl leading-none ${font === "mincho" ? "font-mincho" : "font-kyokasho"}`}
+                    >
+                      {kana.kana}
+                    </span>
+                    <span className="text-[10px] text-muted-foreground">
+                      {kana.romaji}
+                    </span>
+                  </div>
+                )}
+              />
+            </section>
+          ))}
         </CardContent>
       </Card>
     </div>

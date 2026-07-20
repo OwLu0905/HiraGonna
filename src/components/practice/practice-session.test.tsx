@@ -28,6 +28,38 @@ describe("practice flow", () => {
     expect(screen.getByRole("textbox", { name: "羅馬拼音" })).toHaveFocus()
   })
 
+  test("set selection builds the deck (voiced only → 25 questions)", async () => {
+    const user = userEvent.setup()
+    render(<PracticeSession />)
+
+    // Default is basic only.
+    expect(
+      screen.getByRole("button", { name: /開始練習（46 題）/ })
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: /濁音・半濁音/ }))
+    expect(
+      screen.getByRole("button", { name: /開始練習（71 題）/ })
+    ).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: /^清音/ }))
+    await user.click(screen.getByRole("button", { name: /開始練習（25 題）/ }))
+
+    expect(screen.getByText("已回答 0 / 25")).toBeInTheDocument()
+    expect(usePracticeStore.getState().deck.every((k) => k.set === "voiced")).toBe(
+      true
+    )
+  })
+
+  test("start button is disabled when no set is selected", async () => {
+    const user = userEvent.setup()
+    render(<PracticeSession />)
+
+    await user.click(screen.getByRole("button", { name: /^清音/ }))
+    expect(screen.getByRole("button", { name: /開始練習（0 題）/ })).toBeDisabled()
+    expect(screen.getByText("請至少選擇一個範圍")).toBeInTheDocument()
+  })
+
   test("submit reveals the answer without advancing; 下一題 advances", async () => {
     const user = userEvent.setup()
     render(<PracticeSession />)

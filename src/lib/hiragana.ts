@@ -1,24 +1,37 @@
 export type VowelRow = "a" | "i" | "u" | "e" | "o"
 
+export type KanaSet = "basic" | "voiced" | "contracted"
+
+export const SET_LABELS: Record<KanaSet, string> = {
+  basic: "清音",
+  voiced: "濁音・半濁音",
+  contracted: "拗音",
+}
+
 export interface Kana {
   kana: string
   /** Canonical Hepburn romaji, e.g. "shi" */
   romaji: string
   /** Other accepted spellings, e.g. Kunrei "si" */
   alternates: string[]
-  /** Consonant column of the gojūon table ("" for the vowel column, "n" for ん) */
+  /** Consonant column of its gojūon-style table ("" for the vowel column, "n-syllabic" for ん) */
   column: string
-  /** Vowel row of the gojūon table (null for ん) */
+  /** Vowel row of its table (null for ん) */
   vowel: VowelRow | null
+  set: KanaSet
 }
 
-const k = (
-  kana: string,
-  romaji: string,
-  column: string,
-  vowel: VowelRow | null,
-  alternates: string[] = []
-): Kana => ({ kana, romaji, alternates, column, vowel })
+const makeKana =
+  (set: KanaSet) =>
+  (
+    kana: string,
+    romaji: string,
+    column: string,
+    vowel: VowelRow | null,
+    alternates: string[] = []
+  ): Kana => ({ kana, romaji, alternates, column, vowel, set })
+
+const k = makeKana("basic")
 
 /** The 46 basic hiragana (gojūon + ん). */
 export const HIRAGANA: Kana[] = [
@@ -70,25 +83,122 @@ export const HIRAGANA: Kana[] = [
   k("ん", "n", "n-syllabic", null, ["nn"]),
 ]
 
+const v = makeKana("voiced")
+
+/** The 25 voiced (濁音) and semi-voiced (半濁音) kana. */
+export const VOICED: Kana[] = [
+  v("が", "ga", "g", "a"),
+  v("ぎ", "gi", "g", "i"),
+  v("ぐ", "gu", "g", "u"),
+  v("げ", "ge", "g", "e"),
+  v("ご", "go", "g", "o"),
+  v("ざ", "za", "z", "a"),
+  v("じ", "ji", "z", "i", ["zi"]),
+  v("ず", "zu", "z", "u"),
+  v("ぜ", "ze", "z", "e"),
+  v("ぞ", "zo", "z", "o"),
+  v("だ", "da", "d", "a"),
+  v("ぢ", "ji", "d", "i", ["di", "dji"]),
+  v("づ", "zu", "d", "u", ["du", "dzu"]),
+  v("で", "de", "d", "e"),
+  v("ど", "do", "d", "o"),
+  v("ば", "ba", "b", "a"),
+  v("び", "bi", "b", "i"),
+  v("ぶ", "bu", "b", "u"),
+  v("べ", "be", "b", "e"),
+  v("ぼ", "bo", "b", "o"),
+  v("ぱ", "pa", "p", "a"),
+  v("ぴ", "pi", "p", "i"),
+  v("ぷ", "pu", "p", "u"),
+  v("ぺ", "pe", "p", "e"),
+  v("ぽ", "po", "p", "o"),
+]
+
+const c = makeKana("contracted")
+
+/** The 33 contracted sounds (拗音), rows a / u / o only. */
+export const CONTRACTED: Kana[] = [
+  c("きゃ", "kya", "ky", "a"),
+  c("きゅ", "kyu", "ky", "u"),
+  c("きょ", "kyo", "ky", "o"),
+  c("しゃ", "sha", "sh", "a", ["sya"]),
+  c("しゅ", "shu", "sh", "u", ["syu"]),
+  c("しょ", "sho", "sh", "o", ["syo"]),
+  c("ちゃ", "cha", "ch", "a", ["tya", "cya"]),
+  c("ちゅ", "chu", "ch", "u", ["tyu", "cyu"]),
+  c("ちょ", "cho", "ch", "o", ["tyo", "cyo"]),
+  c("にゃ", "nya", "ny", "a"),
+  c("にゅ", "nyu", "ny", "u"),
+  c("にょ", "nyo", "ny", "o"),
+  c("ひゃ", "hya", "hy", "a"),
+  c("ひゅ", "hyu", "hy", "u"),
+  c("ひょ", "hyo", "hy", "o"),
+  c("みゃ", "mya", "my", "a"),
+  c("みゅ", "myu", "my", "u"),
+  c("みょ", "myo", "my", "o"),
+  c("りゃ", "rya", "ry", "a"),
+  c("りゅ", "ryu", "ry", "u"),
+  c("りょ", "ryo", "ry", "o"),
+  c("ぎゃ", "gya", "gy", "a"),
+  c("ぎゅ", "gyu", "gy", "u"),
+  c("ぎょ", "gyo", "gy", "o"),
+  c("じゃ", "ja", "j", "a", ["jya", "zya"]),
+  c("じゅ", "ju", "j", "u", ["jyu", "zyu"]),
+  c("じょ", "jo", "j", "o", ["jyo", "zyo"]),
+  c("びゃ", "bya", "by", "a"),
+  c("びゅ", "byu", "by", "u"),
+  c("びょ", "byo", "by", "o"),
+  c("ぴゃ", "pya", "py", "a"),
+  c("ぴゅ", "pyu", "py", "u"),
+  c("ぴょ", "pyo", "py", "o"),
+]
+
+export const KANA_SETS: Record<KanaSet, Kana[]> = {
+  basic: HIRAGANA,
+  voiced: VOICED,
+  contracted: CONTRACTED,
+}
+
+export const ALL_KANA: Kana[] = [...HIRAGANA, ...VOICED, ...CONTRACTED]
+
 /** Gojūon table axes: columns are consonant rows (行), rows are vowels (段). */
 export const GOJUON_COLUMNS = ["", "k", "s", "t", "n", "h", "m", "y", "r", "w"] as const
 export const GOJUON_VOWELS: VowelRow[] = ["a", "i", "u", "e", "o"]
 
-export const COLUMN_LABELS: Record<string, string> = {
-  "": "あ行",
-  k: "か行",
-  s: "さ行",
-  t: "た行",
-  n: "な行",
-  h: "は行",
-  m: "ま行",
-  y: "や行",
-  r: "ら行",
-  w: "わ行",
+export interface KanaGridDef {
+  /** Column keys in display order, matching Kana.column. */
+  columns: readonly string[]
+  /** Header label per column. */
+  headers: readonly string[]
+  vowels: readonly VowelRow[]
+  /** Append the syllabic ん as a trailing column (basic set only). */
+  includeN: boolean
 }
 
+export const GRID_DEFS: Record<KanaSet, KanaGridDef> = {
+  basic: {
+    columns: GOJUON_COLUMNS,
+    headers: ["a", "k", "s", "t", "n", "h", "m", "y", "r", "w"],
+    vowels: GOJUON_VOWELS,
+    includeN: true,
+  },
+  voiced: {
+    columns: ["g", "z", "d", "b", "p"],
+    headers: ["g", "z", "d", "b", "p"],
+    vowels: GOJUON_VOWELS,
+    includeN: false,
+  },
+  contracted: {
+    columns: ["ky", "sh", "ch", "ny", "hy", "my", "ry", "gy", "j", "by", "py"],
+    headers: ["ky", "sh", "ch", "ny", "hy", "my", "ry", "gy", "j", "by", "py"],
+    vowels: ["a", "u", "o"],
+    includeN: false,
+  },
+}
+
+/** Looks up a kana by table position (columns are unique across all sets). */
 export function findKana(column: string, vowel: VowelRow): Kana | undefined {
-  return HIRAGANA.find((h) => h.column === column && h.vowel === vowel)
+  return ALL_KANA.find((h) => h.column === column && h.vowel === vowel)
 }
 
 export function normalizeRomaji(input: string): string {

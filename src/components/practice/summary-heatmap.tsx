@@ -14,8 +14,10 @@ import {
 } from "@/components/ui/card"
 import {
   formatSeconds,
+  SET_LABELS,
   speedBucket,
   SPEED_THRESHOLDS,
+  type KanaSet,
   type SpeedBucket,
 } from "@/lib/hiragana"
 import {
@@ -50,6 +52,9 @@ export function SummaryHeatmap() {
   )
   const correctCount = answers.filter((a) => a.correct).length
   const weakKana = weakKanaFrom(answers)
+  const sets = (Object.keys(SET_LABELS) as KanaSet[]).filter((set) =>
+    deck.some((k) => k.set === set)
+  )
   const totalMs = answers.reduce((sum, a) => sum + a.timeMs, 0)
   const avgMs = answers.length > 0 ? totalMs / answers.length : 0
 
@@ -73,12 +78,22 @@ export function SummaryHeatmap() {
           </dl>
         </CardHeader>
         <CardContent className="flex flex-col gap-4">
-          <KanaGrid
-            renderKana={(kana) => {
-              const answer = byKana.get(kana.kana)
-              return <HeatmapCell kana={kana.kana} answer={answer} />
-            }}
-          />
+          {sets.map((set) => (
+            <section key={set} className="flex flex-col gap-1.5">
+              {sets.length > 1 && (
+                <h3 className="text-sm font-medium text-muted-foreground">
+                  {SET_LABELS[set]}
+                </h3>
+              )}
+              <KanaGrid
+                set={set}
+                renderKana={(kana) => {
+                  const answer = byKana.get(kana.kana)
+                  return <HeatmapCell kana={kana.kana} answer={answer} />
+                }}
+              />
+            </section>
+          ))}
           <ul className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-muted-foreground">
             {(Object.keys(BUCKET_STYLES) as SpeedBucket[]).map((bucket) => (
               <li key={bucket} className="flex items-center gap-1.5">
