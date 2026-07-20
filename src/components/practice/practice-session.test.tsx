@@ -96,12 +96,15 @@ describe("practice flow", () => {
     ).toBeInTheDocument()
   })
 
-  test("submit button is disabled while the input is empty", async () => {
+  test("Enter with an empty input does not submit", async () => {
     const user = userEvent.setup()
     render(<PracticeSession />)
     await user.click(screen.getByRole("button", { name: /開始練習/ }))
 
-    expect(screen.getByRole("button", { name: "送出" })).toBeDisabled()
+    await user.keyboard("{Enter}")
+
+    expect(screen.queryByText(/答對了|答錯了/)).not.toBeInTheDocument()
+    expect(screen.getByText("已回答 0 / 46")).toBeInTheDocument()
   })
 
   test("結束 Session after answering shows the summary heatmap", async () => {

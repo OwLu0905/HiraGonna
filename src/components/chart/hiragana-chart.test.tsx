@@ -20,20 +20,26 @@ describe("HiraganaChart", () => {
     expect(screen.getByRole("table", { name: "五十音表 拗音" })).toBeInTheDocument()
   })
 
-  test("toggles between Kyōkasho and Mincho fonts and labels the current one", async () => {
+  test("toggles between Kyōkasho and Mincho fonts and marks the current one", async () => {
     const user = userEvent.setup()
     render(<HiraganaChart />)
 
-    expect(screen.getByTestId("current-font")).toHaveTextContent("教科書体")
+    expect(screen.getByRole("button", { name: "教科書体" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    )
     expect(screen.getByText("あ")).toHaveClass("font-kyokasho")
 
     await user.click(screen.getByRole("button", { name: "明朝体" }))
 
-    expect(screen.getByTestId("current-font")).toHaveTextContent("明朝体")
     expect(screen.getByText("あ")).toHaveClass("font-mincho")
     expect(screen.getByRole("button", { name: "明朝体" })).toHaveAttribute(
       "aria-pressed",
       "true"
+    )
+    expect(screen.getByRole("button", { name: "教科書体" })).toHaveAttribute(
+      "aria-pressed",
+      "false"
     )
   })
 })

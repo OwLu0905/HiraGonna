@@ -5,14 +5,6 @@ import { Crosshair, RotateCcw, X } from "lucide-react"
 import { KanaGrid } from "@/components/kana-grid"
 import { Button } from "@/components/ui/button"
 import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import {
   formatSeconds,
   SET_LABELS,
   speedBucket,
@@ -30,9 +22,9 @@ import { cn } from "@/lib/utils"
 /* Status palette (fixed): good / warning / critical, used as tinted cell fills.
    Time text + the ✗ marker carry the meaning alongside color. */
 const BUCKET_STYLES: Record<SpeedBucket, string> = {
-  fast: "border-[#0ca30c]/50 bg-[#0ca30c]/15",
-  medium: "border-[#fab219]/60 bg-[#fab219]/20",
-  slow: "border-[#d03b3b]/50 bg-[#d03b3b]/15",
+  fast: "bg-[#0ca30c]/20",
+  medium: "bg-[#fab219]/25",
+  slow: "bg-[#d03b3b]/20",
 }
 
 const BUCKET_LABELS: Record<SpeedBucket, string> = {
@@ -60,13 +52,13 @@ export function SummaryHeatmap() {
 
   return (
     <div className="flex flex-1 justify-center">
-      <Card className="w-full max-w-4xl">
-        <CardHeader>
-          <CardTitle>成績總表</CardTitle>
-          <CardDescription>
+      <div className="flex w-full max-w-4xl flex-col gap-6">
+        <header className="flex flex-col gap-1.5">
+          <h1 className="font-mincho text-2xl font-semibold">成績總表</h1>
+          <p className="text-sm text-muted-foreground">
             顏色代表每個字的作答時間（顯示題目到送出）。
-          </CardDescription>
-          <dl className="mt-2 grid grid-cols-2 gap-4 sm:grid-cols-4">
+          </p>
+          <dl className="mt-3 grid grid-cols-2 gap-4 sm:grid-cols-4">
             <Stat label="已作答" value={`${answers.length} / ${deck.length}`} />
             <Stat
               label="答對"
@@ -76,8 +68,8 @@ export function SummaryHeatmap() {
             <Stat label="平均時間" value={formatSeconds(avgMs)} />
             <Stat label="總時間" value={formatSeconds(totalMs)} />
           </dl>
-        </CardHeader>
-        <CardContent className="flex flex-col gap-4">
+        </header>
+        <div className="flex flex-col gap-4">
           {sets.map((set) => (
             <section key={set} className="flex flex-col gap-1.5">
               {sets.length > 1 && (
@@ -99,7 +91,7 @@ export function SummaryHeatmap() {
               <li key={bucket} className="flex items-center gap-1.5">
                 <span
                   aria-hidden
-                  className={cn("size-3 rounded-sm border", BUCKET_STYLES[bucket])}
+                  className={cn("size-3 rounded-sm", BUCKET_STYLES[bucket])}
                 />
                 {BUCKET_LABELS[bucket]}
               </li>
@@ -109,12 +101,12 @@ export function SummaryHeatmap() {
               答錯
             </li>
             <li className="flex items-center gap-1.5">
-              <span aria-hidden className="size-3 rounded-sm border bg-muted/40" />
+              <span aria-hidden className="size-3 rounded-sm bg-muted" />
               未作答
             </li>
           </ul>
-        </CardContent>
-        <CardFooter className="flex-wrap gap-2">
+        </div>
+        <footer className="flex flex-wrap gap-2">
           {weakKana.length > 0 && (
             <Button onClick={() => start({ deck: weakKana })}>
               <Crosshair data-icon="inline-start" />
@@ -122,17 +114,17 @@ export function SummaryHeatmap() {
             </Button>
           )}
           <Button
-            variant={weakKana.length > 0 ? "outline" : "default"}
+            variant={weakKana.length > 0 ? "secondary" : "default"}
             onClick={() => start()}
           >
             <RotateCcw data-icon="inline-start" />
             再練習一次
           </Button>
-          <Button variant="outline" onClick={reset}>
+          <Button variant="ghost" onClick={reset}>
             回到開始
           </Button>
-        </CardFooter>
-      </Card>
+        </footer>
+      </div>
     </div>
   )
 }
@@ -162,10 +154,10 @@ function HeatmapCell({
       data-testid={`heatmap-${kana}`}
       data-bucket={answer ? speedBucket(answer.timeMs) : "none"}
       className={cn(
-        "relative flex flex-col items-center gap-0.5 rounded-lg border px-1 py-2",
+        "relative flex flex-col items-center gap-0.5 rounded-md px-1 py-2",
         answer
           ? BUCKET_STYLES[speedBucket(answer.timeMs)]
-          : "bg-muted/40 text-muted-foreground"
+          : "bg-muted text-muted-foreground"
       )}
     >
       {answer && !answer.correct && (
