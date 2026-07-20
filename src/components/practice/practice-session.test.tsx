@@ -7,6 +7,8 @@ import { usePracticeStore } from "@/lib/practice-store"
 
 beforeEach(() => {
   usePracticeStore.getState().reset()
+  // mode is a sticky preference (survives reset); pin it for test isolation
+  usePracticeStore.setState({ mode: "typing" })
 })
 
 function currentKana() {
@@ -60,7 +62,7 @@ describe("practice flow", () => {
     expect(screen.getByText("請至少選擇一個範圍")).toBeInTheDocument()
   })
 
-  test("submit reveals the answer without advancing; 下一題 advances", async () => {
+  test("submit reveals the answer without advancing; Enter advances", async () => {
     const user = userEvent.setup()
     render(<PracticeSession />)
     await user.click(screen.getByRole("button", { name: /開始練習/ }))
@@ -72,9 +74,8 @@ describe("practice flow", () => {
     expect(screen.getByText("答對了")).toBeInTheDocument()
     expect(screen.getByTestId("question-kana")).toHaveTextContent(first.kana)
     expect(screen.getByText("已回答 1 / 46")).toBeInTheDocument()
-    expect(screen.getByText(/字體：(明朝体|教科書体)/)).toBeInTheDocument()
 
-    await user.click(screen.getByRole("button", { name: /下一題/ }))
+    await user.keyboard("{Enter}")
 
     const second = currentKana()
     expect(usePracticeStore.getState().currentIndex).toBe(1)
@@ -114,7 +115,7 @@ describe("practice flow", () => {
 
     const first = currentKana()
     await user.keyboard(`${first.romaji}{Enter}`)
-    await user.click(screen.getByRole("button", { name: /下一題/ }))
+    await user.keyboard("{Enter}")
     await user.click(screen.getByRole("button", { name: /結束 Session/ }))
 
     expect(screen.getByText("成績總表")).toBeInTheDocument()
@@ -145,9 +146,9 @@ describe("practice flow", () => {
 
     const missed = currentKana()
     await user.keyboard("zzz{Enter}")
-    await user.click(screen.getByRole("button", { name: /下一題/ }))
+    await user.keyboard("{Enter}")
     await user.keyboard(`${currentKana().romaji}{Enter}`)
-    await user.click(screen.getByRole("button", { name: /下一題/ }))
+    await user.keyboard("{Enter}")
     await user.click(screen.getByRole("button", { name: /結束 Session/ }))
 
     await user.click(screen.getByRole("button", { name: /只練弱點（1）/ }))
@@ -162,7 +163,7 @@ describe("practice flow", () => {
     render(<PracticeSession />)
     await user.click(screen.getByRole("button", { name: /開始練習/ }))
     await user.keyboard(`${currentKana().romaji}{Enter}`)
-    await user.click(screen.getByRole("button", { name: /下一題/ }))
+    await user.keyboard("{Enter}")
     await user.click(screen.getByRole("button", { name: /結束 Session/ }))
 
     expect(screen.getByText("成績總表")).toBeInTheDocument()
@@ -171,12 +172,78 @@ describe("practice flow", () => {
     ).not.toBeInTheDocument()
   })
 
+  test("the input stays mounted after reveal and Enter advances (mobile keyboard flow)", async () => {
+    const user = userEvent.setup()
+    render(<PracticeSession />)
+    await user.click(screen.getByRole("button", { name: /開始練習/ }))
+
+    await user.keyboard(`${currentKana().romaji}{Enter}`)
+    expect(screen.getByText("答對了")).toBeInTheDocument()
+
+    // The input survives the reveal so the mobile keyboard never collapses.
+    const input = screen.getByRole("textbox", { name: "羅馬拼音" })
+    expect(input).toHaveFocus()
+
+    await user.keyboard("{Enter}")
+    expect(usePracticeStore.getState().currentIndex).toBe(1)
+    expect(input).toHaveValue("")
+  })
+
+  test("the kana itself is accepted as a correct answer (flick keyboard)", async () => {
+    const user = userEvent.setup()
+    render(<PracticeSession />)
+    await user.click(screen.getByRole("button", { name: /開始練習/ }))
+
+    await user.keyboard(`${currentKana().kana}{Enter}`)
+    expect(screen.getByText("答對了")).toBeInTheDocument()
+  })
+
+  test("choice mode shows romaji options and tapping the right one is correct", async () => {
+    const user = userEvent.setup()
+    render(<PracticeSession />)
+
+    await user.click(screen.getByRole("button", { name: "選擇模式" }))
+    await user.click(screen.getByRole("button", { name: /開始練習/ }))
+
+    const state = usePracticeStore.getState()
+    expect(state.mode).toBe("choice")
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument()
+
+    const first = currentKana()
+    expect(state.choices[0]).toContain(first.romaji)
+
+    await user.click(screen.getByRole("button", { name: first.romaji }))
+    expect(screen.getByText("答對了")).toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: /下一題/ }))
+    expect(usePracticeStore.getState().currentIndex).toBe(1)
+  })
+
+  test("choice mode marks a wrong tap and still shows the correct reading", async () => {
+    const user = userEvent.setup()
+    render(<PracticeSession />)
+
+    await user.click(screen.getByRole("button", { name: "選擇模式" }))
+    await user.click(screen.getByRole("button", { name: /開始練習/ }))
+
+    const first = currentKana()
+    const wrong = usePracticeStore
+      .getState()
+      .choices[0].find((r) => r !== first.romaji)!
+
+    await user.click(screen.getByRole("button", { name: wrong }))
+    expect(screen.getByText(/答錯了/)).toBeInTheDocument()
+    expect(
+      screen.getByText(new RegExp(`${first.kana} = ${first.romaji}`))
+    ).toBeInTheDocument()
+  })
+
   test("summary shows stats and can restart", async () => {
     const user = userEvent.setup()
     render(<PracticeSession />)
     await user.click(screen.getByRole("button", { name: /開始練習/ }))
     await user.keyboard(`${currentKana().romaji}{Enter}`)
-    await user.click(screen.getByRole("button", { name: /下一題/ }))
+    await user.keyboard("{Enter}")
     await user.click(screen.getByRole("button", { name: /結束 Session/ }))
 
     const correctStat = screen.getByTestId("stat-correct")

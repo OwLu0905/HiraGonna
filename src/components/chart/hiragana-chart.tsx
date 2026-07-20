@@ -58,7 +58,7 @@ export function HiraganaChart() {
                     >
                       {kana.kana}
                     </span>
-                    <span className="text-[10px] text-muted-foreground">
+                    <span className="text-2xs text-muted-foreground">
                       {kana.romaji}
                     </span>
                   </div>

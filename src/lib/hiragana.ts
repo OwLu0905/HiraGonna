@@ -201,15 +201,30 @@ export function findKana(column: string, vowel: VowelRow): Kana | undefined {
   return ALL_KANA.find((h) => h.column === column && h.vowel === vowel)
 }
 
-export function normalizeRomaji(input: string): string {
-  return input.trim().toLowerCase()
+/** trim, fullwidth latin/digits → halfwidth, lowercase, katakana → hiragana. */
+export function normalizeAnswer(input: string): string {
+  return input
+    .trim()
+    .replace(/[Ａ-Ｚａ-ｚ０-９]/g, (c) =>
+      String.fromCharCode(c.charCodeAt(0) - 0xfee0)
+    )
+    .toLowerCase()
+    .replace(/[ァ-ヶ]/g, (c) => String.fromCharCode(c.charCodeAt(0) - 0x60))
 }
 
-/** Whether the given romaji input matches the kana (canonical or alternate spelling). */
-export function isCorrectRomaji(kana: Kana, input: string): boolean {
-  const normalized = normalizeRomaji(input)
+/**
+ * Whether the input answers the kana: romaji (canonical or alternate spelling)
+ * or the kana itself — flick-keyboard users type the kana directly, which
+ * proves the same kana→sound mapping.
+ */
+export function isCorrectAnswer(kana: Kana, input: string): boolean {
+  const normalized = normalizeAnswer(input)
   if (normalized.length === 0) return false
-  return normalized === kana.romaji || kana.alternates.includes(normalized)
+  return (
+    normalized === kana.romaji ||
+    kana.alternates.includes(normalized) ||
+    normalized === kana.kana
+  )
 }
 
 /** Fisher–Yates shuffle; `random` is injectable for tests. */
@@ -220,6 +235,31 @@ export function shuffle<T>(items: readonly T[], random: () => number = Math.rand
     ;[result[i], result[j]] = [result[j], result[i]]
   }
   return result
+}
+
+/**
+ * Romaji choices for choice mode: the correct reading plus distractors,
+ * preferring kana from the same column (行) or vowel row (段) since those are
+ * the confusable ones. Returned shuffled; readings are unique.
+ */
+export function buildChoices(
+  kana: Kana,
+  count = 6,
+  random: () => number = Math.random
+): string[] {
+  const pool = KANA_SETS[kana.set].filter((k) => k.romaji !== kana.romaji)
+  const near = pool.filter(
+    (k) =>
+      k.column === kana.column || (k.vowel !== null && k.vowel === kana.vowel)
+  )
+  const far = pool.filter((k) => !near.includes(k))
+
+  const distractors: string[] = []
+  for (const candidate of [...shuffle(near, random), ...shuffle(far, random)]) {
+    if (distractors.length >= count - 1) break
+    if (!distractors.includes(candidate.romaji)) distractors.push(candidate.romaji)
+  }
+  return shuffle([kana.romaji, ...distractors], random)
 }
 
 export type SpeedBucket = "fast" | "medium" | "slow"

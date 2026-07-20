@@ -19,12 +19,12 @@ import {
 } from "@/lib/practice-store"
 import { cn } from "@/lib/utils"
 
-/* Status palette (fixed): good / warning / critical, used as tinted cell fills.
+/* Status palette (semantic tokens), used as tinted cell fills.
    Time text + the ✗ marker carry the meaning alongside color. */
 const BUCKET_STYLES: Record<SpeedBucket, string> = {
-  fast: "bg-[#0ca30c]/20",
-  medium: "bg-[#fab219]/25",
-  slow: "bg-[#d03b3b]/20",
+  fast: "bg-success/20",
+  medium: "bg-warning/25",
+  slow: "bg-destructive/20",
 }
 
 const BUCKET_LABELS: Record<SpeedBucket, string> = {
@@ -169,7 +169,7 @@ function HeatmapCell({
       <span lang="ja" className="text-xl leading-none">
         {kana}
       </span>
-      <span className="text-[10px] text-muted-foreground tabular-nums">
+      <span className="text-2xs text-muted-foreground tabular-nums">
         {answer ? formatSeconds(answer.timeMs) : "—"}
       </span>
     </div>

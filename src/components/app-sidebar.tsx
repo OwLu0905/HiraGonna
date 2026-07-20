@@ -25,7 +25,7 @@ export function AppSidebar() {
   const pathname = usePathname()
 
   return (
-    <Sidebar>
+    <Sidebar variant="floating">
       <SidebarHeader>
         <div className="flex items-center gap-2 px-2 py-1.5">
           <span className="flex size-8 items-center justify-center rounded-lg bg-primary font-mincho text-lg text-primary-foreground">

@@ -42,6 +42,14 @@
   --color-card-foreground: var(--card-foreground);
   --color-card: var(--card);
   --color-vermillion: var(--vermillion);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  /* 10px caption, e.g. romaji labels under kana cells */
+  --text-2xs: 0.625rem;
+  --text-2xs--line-height: 0.875rem;
+  /* Display size for the practice-question kana */
+  --text-kana: 7.5rem;
+  --text-kana--line-height: 1;
   --radius-sm: calc(var(--radius) * 0.6);
   --radius-md: calc(var(--radius) * 0.8);
   --radius-lg: var(--radius);
@@ -71,6 +79,8 @@
   --input: oklch(0.922 0 0);
   --ring: oklch(0.708 0 0);
   --vermillion: oklch(0.56 0.18 33);
+  --success: oklch(0.62 0.19 145);
+  --warning: oklch(0.8 0.16 80);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);

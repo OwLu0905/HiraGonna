@@ -90,8 +90,9 @@ function SidebarProvider({
 
   // Helper to toggle the sidebar.
   const toggleSidebar = React.useCallback(() => {
-    return isMobile ? setOpenMobile((open) => !open) : setOpen((open) => !open)
-  }, [isMobile, setOpen, setOpenMobile])
+    // Desktop sidebar is fixed open (non-collapsible); only the mobile sheet toggles.
+    if (isMobile) setOpenMobile((open) => !open)
+  }, [isMobile, setOpenMobile])
 
   // Adds a keyboard shortcut to toggle the sidebar.
   React.useEffect(() => {

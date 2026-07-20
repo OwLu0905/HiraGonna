@@ -2,6 +2,7 @@ import { describe, expect, test } from "vitest"
 
 import {
   ALL_KANA,
+  buildChoices,
   CONTRACTED,
   findKana,
   formatSeconds,
@@ -9,7 +10,8 @@ import {
   GOJUON_VOWELS,
   GRID_DEFS,
   HIRAGANA,
-  isCorrectRomaji,
+  isCorrectAnswer,
+  normalizeAnswer,
   randomFont,
   shuffle,
   speedBucket,
@@ -81,48 +83,96 @@ describe("VOICED and CONTRACTED data", () => {
   test("voiced homophones accept IME spellings", () => {
     const di = VOICED.find((k) => k.kana === "ぢ")!
     const du = VOICED.find((k) => k.kana === "づ")!
-    expect(isCorrectRomaji(di, "ji")).toBe(true)
-    expect(isCorrectRomaji(di, "di")).toBe(true)
-    expect(isCorrectRomaji(du, "zu")).toBe(true)
-    expect(isCorrectRomaji(du, "du")).toBe(true)
+    expect(isCorrectAnswer(di, "ji")).toBe(true)
+    expect(isCorrectAnswer(di, "di")).toBe(true)
+    expect(isCorrectAnswer(du, "zu")).toBe(true)
+    expect(isCorrectAnswer(du, "du")).toBe(true)
   })
 
   test("contracted sounds accept Kunrei/IME spellings", () => {
     const ja = CONTRACTED.find((k) => k.kana === "じゃ")!
     const sha = CONTRACTED.find((k) => k.kana === "しゃ")!
     const cha = CONTRACTED.find((k) => k.kana === "ちゃ")!
-    expect(isCorrectRomaji(ja, "ja")).toBe(true)
-    expect(isCorrectRomaji(ja, "zya")).toBe(true)
-    expect(isCorrectRomaji(ja, "jya")).toBe(true)
-    expect(isCorrectRomaji(sha, "sya")).toBe(true)
-    expect(isCorrectRomaji(cha, "tya")).toBe(true)
+    expect(isCorrectAnswer(ja, "ja")).toBe(true)
+    expect(isCorrectAnswer(ja, "zya")).toBe(true)
+    expect(isCorrectAnswer(ja, "jya")).toBe(true)
+    expect(isCorrectAnswer(sha, "sya")).toBe(true)
+    expect(isCorrectAnswer(cha, "tya")).toBe(true)
   })
 })
 
-describe("isCorrectRomaji", () => {
+describe("isCorrectAnswer", () => {
   const shi = HIRAGANA.find((h) => h.kana === "し")!
   const a = HIRAGANA.find((h) => h.kana === "あ")!
   const n = HIRAGANA.find((h) => h.kana === "ん")!
 
   test("accepts the canonical spelling", () => {
-    expect(isCorrectRomaji(shi, "shi")).toBe(true)
-    expect(isCorrectRomaji(a, "a")).toBe(true)
+    expect(isCorrectAnswer(shi, "shi")).toBe(true)
+    expect(isCorrectAnswer(a, "a")).toBe(true)
   })
 
   test("accepts alternate spellings (Kunrei-shiki etc.)", () => {
-    expect(isCorrectRomaji(shi, "si")).toBe(true)
-    expect(isCorrectRomaji(n, "nn")).toBe(true)
-    expect(isCorrectRomaji(HIRAGANA.find((h) => h.kana === "ふ")!, "hu")).toBe(true)
+    expect(isCorrectAnswer(shi, "si")).toBe(true)
+    expect(isCorrectAnswer(n, "nn")).toBe(true)
+    expect(isCorrectAnswer(HIRAGANA.find((h) => h.kana === "ふ")!, "hu")).toBe(true)
   })
 
   test("ignores case and surrounding whitespace", () => {
-    expect(isCorrectRomaji(shi, "  SHI ")).toBe(true)
+    expect(isCorrectAnswer(shi, "  SHI ")).toBe(true)
   })
 
   test("rejects wrong or empty input", () => {
-    expect(isCorrectRomaji(shi, "chi")).toBe(false)
-    expect(isCorrectRomaji(shi, "")).toBe(false)
-    expect(isCorrectRomaji(shi, "   ")).toBe(false)
+    expect(isCorrectAnswer(shi, "chi")).toBe(false)
+    expect(isCorrectAnswer(shi, "")).toBe(false)
+    expect(isCorrectAnswer(shi, "   ")).toBe(false)
+  })
+
+  test("accepts the kana itself (flick-keyboard input)", () => {
+    expect(isCorrectAnswer(shi, "し")).toBe(true)
+    expect(isCorrectAnswer(a, "あ")).toBe(true)
+    expect(isCorrectAnswer(shi, "ち")).toBe(false)
+  })
+
+  test("accepts katakana via normalization", () => {
+    expect(isCorrectAnswer(shi, "シ")).toBe(true)
+  })
+
+  test("accepts fullwidth latin via normalization", () => {
+    expect(isCorrectAnswer(shi, "ｓｈｉ")).toBe(true)
+    expect(isCorrectAnswer(shi, "ＳＨＩ")).toBe(true)
+  })
+})
+
+describe("normalizeAnswer", () => {
+  test("trims, lowercases, and converts fullwidth latin", () => {
+    expect(normalizeAnswer(" ＦＵ ")).toBe("fu")
+  })
+
+  test("converts katakana to hiragana", () => {
+    expect(normalizeAnswer("キャ")).toBe("きゃ")
+  })
+})
+
+describe("buildChoices", () => {
+  const shi = HIRAGANA.find((h) => h.kana === "し")!
+
+  test("returns unique choices including the correct reading", () => {
+    const choices = buildChoices(shi, 6)
+    expect(choices).toHaveLength(6)
+    expect(new Set(choices).size).toBe(6)
+    expect(choices).toContain("shi")
+  })
+
+  test("all choices are readings from the same kana set", () => {
+    const readings = new Set(HIRAGANA.map((k) => k.romaji))
+    for (const c of buildChoices(shi, 6)) {
+      expect(readings.has(c)).toBe(true)
+    }
+  })
+
+  test("is deterministic with an injected random", () => {
+    const fixed = () => 0.42
+    expect(buildChoices(shi, 6, fixed)).toEqual(buildChoices(shi, 6, fixed))
   })
 })
 

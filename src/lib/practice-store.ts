@@ -1,8 +1,9 @@
 import { create } from "zustand"
 
 import {
+  buildChoices,
   HIRAGANA,
-  isCorrectRomaji,
+  isCorrectAnswer,
   randomFont,
   shuffle,
   speedBucket,
@@ -11,6 +12,9 @@ import {
 } from "@/lib/hiragana"
 
 export type PracticePhase = "idle" | "question" | "revealed" | "summary"
+
+/** typing = free romaji/kana input; choice = tap one of several romaji options. */
+export type PracticeMode = "typing" | "choice"
 
 export interface AnswerRecord {
   kana: Kana
@@ -23,16 +27,24 @@ export interface AnswerRecord {
 
 export interface PracticeState {
   phase: PracticePhase
+  mode: PracticeMode
   deck: Kana[]
   /** Per-question display font, fixed when the session starts. */
   fonts: KanaFont[]
+  /** Per-question romaji options for choice mode, fixed when the session starts. */
+  choices: string[][]
   currentIndex: number
   answers: AnswerRecord[]
   /** Timestamp when the current question was shown; null outside "question". */
   questionShownAt: number | null
 
-  /** Starts a session over `deck` (defaults to all 46), shuffled. */
-  start: (options?: { random?: () => number; now?: number; deck?: Kana[] }) => void
+  /** Starts a session over `deck` (defaults to all 46), shuffled. `mode` defaults to the last used one. */
+  start: (options?: {
+    random?: () => number
+    now?: number
+    deck?: Kana[]
+    mode?: PracticeMode
+  }) => void
   submit: (input: string, now?: number) => void
   next: (now?: number) => void
   endSession: () => void
@@ -48,19 +60,28 @@ export function weakKanaFrom(answers: AnswerRecord[]): Kana[] {
 
 export const usePracticeStore = create<PracticeState>()((set, get) => ({
   phase: "idle",
+  mode: "typing",
   deck: [],
   fonts: [],
+  choices: [],
   currentIndex: 0,
   answers: [],
   questionShownAt: null,
 
-  start: ({ random = Math.random, now = Date.now(), deck: source = HIRAGANA } = {}) => {
+  start: ({
+    random = Math.random,
+    now = Date.now(),
+    deck: source = HIRAGANA,
+    mode = get().mode,
+  } = {}) => {
     if (source.length === 0) return
     const deck = shuffle(source, random)
     set({
       phase: "question",
+      mode,
       deck,
       fonts: deck.map(() => randomFont(random)),
+      choices: deck.map((kana) => buildChoices(kana, 6, random)),
       currentIndex: 0,
       answers: [],
       questionShownAt: now,
@@ -78,7 +99,7 @@ export const usePracticeStore = create<PracticeState>()((set, get) => ({
         {
           kana,
           input,
-          correct: isCorrectRomaji(kana, input),
+          correct: isCorrectAnswer(kana, input),
           timeMs: now - questionShownAt,
           font: fonts[currentIndex],
         },
@@ -103,7 +124,14 @@ export const usePracticeStore = create<PracticeState>()((set, get) => ({
     set(
       answers.length > 0
         ? { phase: "summary", questionShownAt: null }
-        : { phase: "idle", deck: [], fonts: [], currentIndex: 0, questionShownAt: null }
+        : {
+            phase: "idle",
+            deck: [],
+            fonts: [],
+            choices: [],
+            currentIndex: 0,
+            questionShownAt: null,
+          }
     )
   },
 
@@ -112,6 +140,7 @@ export const usePracticeStore = create<PracticeState>()((set, get) => ({
       phase: "idle",
       deck: [],
       fonts: [],
+      choices: [],
       currentIndex: 0,
       answers: [],
       questionShownAt: null,
