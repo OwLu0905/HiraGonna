@@ -1,5 +1,12 @@
 export type VowelRow = "a" | "i" | "u" | "e" | "o"
 
+export type Script = "hiragana" | "katakana"
+
+export const SCRIPT_LABELS: Record<Script, string> = {
+  hiragana: "平假名",
+  katakana: "片假名",
+}
+
 export type KanaSet = "basic" | "voiced" | "contracted"
 
 export const SET_LABELS: Record<KanaSet, string> = {
@@ -19,6 +26,7 @@ export interface Kana {
   /** Vowel row of its table (null for ん) */
   vowel: VowelRow | null
   set: KanaSet
+  script: Script
 }
 
 const makeKana =
@@ -29,7 +37,7 @@ const makeKana =
     column: string,
     vowel: VowelRow | null,
     alternates: string[] = []
-  ): Kana => ({ kana, romaji, alternates, column, vowel, set })
+  ): Kana => ({ kana, romaji, alternates, column, vowel, set, script: "hiragana" })
 
 const k = makeKana("basic")
 
@@ -161,6 +169,31 @@ export const KANA_SETS: Record<KanaSet, Kana[]> = {
 
 export const ALL_KANA: Kana[] = [...HIRAGANA, ...VOICED, ...CONTRACTED]
 
+/** ぁ-ゖ → ァ-ヶ (the two blocks share layout at a fixed +0x60 offset). */
+export function toKatakana(text: string): string {
+  return text.replace(/[ぁ-ゖ]/g, (c) => String.fromCharCode(c.charCodeAt(0) + 0x60))
+}
+
+/** Katakana mirrors hiragana sound-for-sound, so its data is derived. */
+const deriveKatakana = (kana: Kana[]): Kana[] =>
+  kana.map((k) => ({ ...k, kana: toKatakana(k.kana), script: "katakana" as const }))
+
+export const KATAKANA_SETS: Record<KanaSet, Kana[]> = {
+  basic: deriveKatakana(HIRAGANA),
+  voiced: deriveKatakana(VOICED),
+  contracted: deriveKatakana(CONTRACTED),
+}
+
+export const SCRIPT_SETS: Record<Script, Record<KanaSet, Kana[]>> = {
+  hiragana: KANA_SETS,
+  katakana: KATAKANA_SETS,
+}
+
+const ALL_BY_SCRIPT: Record<Script, Kana[]> = {
+  hiragana: ALL_KANA,
+  katakana: deriveKatakana(ALL_KANA),
+}
+
 /** Gojūon table axes: columns are consonant rows (行), rows are vowels (段). */
 export const GOJUON_COLUMNS = ["", "k", "s", "t", "n", "h", "m", "y", "r", "w"] as const
 export const GOJUON_VOWELS: VowelRow[] = ["a", "i", "u", "e", "o"]
@@ -197,8 +230,12 @@ export const GRID_DEFS: Record<KanaSet, KanaGridDef> = {
 }
 
 /** Looks up a kana by table position (columns are unique across all sets). */
-export function findKana(column: string, vowel: VowelRow): Kana | undefined {
-  return ALL_KANA.find((h) => h.column === column && h.vowel === vowel)
+export function findKana(
+  column: string,
+  vowel: VowelRow,
+  script: Script = "hiragana"
+): Kana | undefined {
+  return ALL_BY_SCRIPT[script].find((h) => h.column === column && h.vowel === vowel)
 }
 
 /** trim, fullwidth latin/digits → halfwidth, lowercase, katakana → hiragana. */
@@ -215,7 +252,8 @@ export function normalizeAnswer(input: string): string {
 /**
  * Whether the input answers the kana: romaji (canonical or alternate spelling)
  * or the kana itself — flick-keyboard users type the kana directly, which
- * proves the same kana→sound mapping.
+ * proves the same kana→sound mapping. Both sides are normalized, so either
+ * script of the kana answers a question shown in the other.
  */
 export function isCorrectAnswer(kana: Kana, input: string): boolean {
   const normalized = normalizeAnswer(input)
@@ -223,7 +261,7 @@ export function isCorrectAnswer(kana: Kana, input: string): boolean {
   return (
     normalized === kana.romaji ||
     kana.alternates.includes(normalized) ||
-    normalized === kana.kana
+    normalized === normalizeAnswer(kana.kana)
   )
 }
 

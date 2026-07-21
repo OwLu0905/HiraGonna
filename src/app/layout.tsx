@@ -33,7 +33,7 @@ const kleeOne = Klee_One({
 
 export const metadata: Metadata = {
   title: "HiraGonna",
-  description: "日本語五十音（平假名）練習",
+  description: "日本語五十音（平假名・片假名）練習",
 };
 
 export default function RootLayout({

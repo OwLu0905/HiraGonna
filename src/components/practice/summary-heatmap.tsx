@@ -39,6 +39,7 @@ export function SummaryHeatmap() {
   const start = usePracticeStore((s) => s.start)
   const reset = usePracticeStore((s) => s.reset)
 
+  const script = deck[0]?.script ?? "hiragana"
   const byKana = new Map<string, AnswerRecord>(
     answers.map((a) => [a.kana.kana, a])
   )
@@ -79,6 +80,7 @@ export function SummaryHeatmap() {
               )}
               <KanaGrid
                 set={set}
+                script={script}
                 renderKana={(kana) => {
                   const answer = byKana.get(kana.kana)
                   return <HeatmapCell kana={kana.kana} answer={answer} />
@@ -113,9 +115,10 @@ export function SummaryHeatmap() {
               只練弱點（{weakKana.length}）
             </Button>
           )}
+          {/* Re-practice the same deck (start() would fall back to hiragana). */}
           <Button
             variant={weakKana.length > 0 ? "secondary" : "default"}
-            onClick={() => start()}
+            onClick={() => start({ deck })}
           >
             <RotateCcw data-icon="inline-start" />
             再練習一次

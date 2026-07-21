@@ -6,13 +6,15 @@ import { KanaGrid } from "@/components/kana-grid"
 import { Button } from "@/components/ui/button"
 import {
   FONT_LABELS,
+  SCRIPT_LABELS,
   SET_LABELS,
   type KanaFont,
   type KanaSet,
+  type Script,
 } from "@/lib/hiragana"
 import { cn } from "@/lib/utils"
 
-export function HiraganaChart() {
+export function KanaChart({ script = "hiragana" }: { script?: Script }) {
   const [font, setFont] = React.useState<KanaFont>("kyokasho")
 
   return (
@@ -21,7 +23,7 @@ export function HiraganaChart() {
         <div className="flex flex-wrap items-end justify-between gap-4">
           <div className="flex flex-col gap-1.5">
             <h1 className="font-mincho text-2xl font-semibold">
-              五十音表（平假名）
+              五十音表（{SCRIPT_LABELS[script]}）
             </h1>
             <p className="text-sm text-muted-foreground">
               橫軸是子音（行），縱軸是母音（段）。
@@ -50,6 +52,7 @@ export function HiraganaChart() {
               </h3>
               <KanaGrid
                 set={set}
+                script={script}
                 renderKana={(kana) => (
                   <div className="flex flex-col items-center gap-0.5 rounded-lg border bg-card px-1 py-2">
                     <span

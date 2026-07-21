@@ -2,12 +2,12 @@ import { render, screen } from "@testing-library/react"
 import userEvent from "@testing-library/user-event"
 import { describe, expect, test } from "vitest"
 
-import { HiraganaChart } from "@/components/chart/hiragana-chart"
-import { ALL_KANA } from "@/lib/hiragana"
+import { KanaChart } from "@/components/chart/kana-chart"
+import { ALL_KANA, KATAKANA_SETS } from "@/lib/hiragana"
 
-describe("HiraganaChart", () => {
+describe("KanaChart", () => {
   test("renders every kana (basic, voiced, contracted) with romaji", () => {
-    render(<HiraganaChart />)
+    render(<KanaChart />)
     for (const { kana } of ALL_KANA) {
       // getAllByText: ん also appears as its column header.
       expect(screen.getAllByText(kana).length).toBeGreaterThan(0)
@@ -20,9 +20,22 @@ describe("HiraganaChart", () => {
     expect(screen.getByRole("table", { name: "五十音表 拗音" })).toBeInTheDocument()
   })
 
+  test("katakana script renders katakana glyphs with the same romaji", () => {
+    render(<KanaChart script="katakana" />)
+    expect(
+      screen.getByRole("heading", { name: "五十音表（片假名）" })
+    ).toBeInTheDocument()
+    for (const { kana } of KATAKANA_SETS.basic) {
+      // getAllByText: ン also appears as its column header.
+      expect(screen.getAllByText(kana).length).toBeGreaterThan(0)
+    }
+    expect(screen.getByText("キャ")).toBeInTheDocument()
+    expect(screen.queryByText("あ")).not.toBeInTheDocument()
+  })
+
   test("toggles between Kyōkasho and Mincho fonts and marks the current one", async () => {
     const user = userEvent.setup()
-    render(<HiraganaChart />)
+    render(<KanaChart />)
 
     expect(screen.getByRole("button", { name: "教科書体" })).toHaveAttribute(
       "aria-pressed",

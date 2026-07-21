@@ -8,7 +8,13 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { SummaryHeatmap } from "@/components/practice/summary-heatmap";
-import { KANA_SETS, SET_LABELS, type KanaSet } from "@/lib/hiragana";
+import {
+  SCRIPT_LABELS,
+  SCRIPT_SETS,
+  SET_LABELS,
+  type KanaSet,
+  type Script,
+} from "@/lib/hiragana";
 import { usePracticeStore, type PracticeMode } from "@/lib/practice-store";
 import { cn } from "@/lib/utils";
 
@@ -17,25 +23,35 @@ const MODE_LABELS: Record<PracticeMode, string> = {
   choice: "選擇模式",
 };
 
-export function PracticeSession() {
+export function PracticeSession({
+  script = "hiragana",
+}: {
+  script?: Script;
+}) {
   const phase = usePracticeStore((s) => s.phase);
 
-  if (phase === "idle") return <StartScreen />;
+  if (phase === "idle") return <StartScreen script={script} />;
   if (phase === "summary") return <SummaryHeatmap />;
   return <QuestionScreen />;
 }
 
 const ALL_SETS = Object.keys(SET_LABELS) as KanaSet[];
 
-function StartScreen() {
+const SCRIPT_SAMPLES: Record<Script, string> = {
+  hiragana: "あいうえお",
+  katakana: "アイウエオ",
+};
+
+function StartScreen({ script }: { script: Script }) {
   const start = usePracticeStore((s) => s.start);
   const [selected, setSelected] = React.useState<KanaSet[]>(["basic"]);
   const [mode, setMode] = React.useState<PracticeMode>(
     () => usePracticeStore.getState().mode,
   );
 
+  const kanaSets = SCRIPT_SETS[script];
   const deck = ALL_SETS.filter((s) => selected.includes(s)).flatMap(
-    (s) => KANA_SETS[s],
+    (s) => kanaSets[s],
   );
 
   function toggle(set: KanaSet) {
@@ -48,14 +64,16 @@ function StartScreen() {
     <div className="flex flex-1 justify-center pt-6 md:pt-14">
       <div className="flex w-full max-w-md flex-col items-center gap-8 text-center">
         <div className="flex flex-col items-center gap-3">
-          <h1 className="font-mincho text-3xl font-semibold">平假名練習</h1>
+          <h1 className="font-mincho text-3xl font-semibold">
+            {SCRIPT_LABELS[script]}練習
+          </h1>
           <p className="max-w-sm text-sm text-balance text-muted-foreground">
             選擇要練習的範圍，隨機出題。看字輸入羅馬拼音，
             完成後會依作答時間顯示成績總表。
           </p>
         </div>
         <p className="font-mincho text-6xl tracking-widest text-muted-foreground/70">
-          あいうえお
+          {SCRIPT_SAMPLES[script]}
         </p>
         <div className="flex flex-wrap justify-center gap-2">
           {ALL_SETS.map((set) => (
@@ -75,7 +93,7 @@ function StartScreen() {
                     : "scale-50 opacity-0",
                 )}
               />
-              {SET_LABELS[set]}（{KANA_SETS[set].length}）
+              {SET_LABELS[set]}（{kanaSets[set].length}）
             </Button>
           ))}
         </div>

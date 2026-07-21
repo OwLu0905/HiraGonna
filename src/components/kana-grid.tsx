@@ -1,27 +1,33 @@
 import {
   findKana,
   GRID_DEFS,
-  HIRAGANA,
+  SCRIPT_SETS,
   SET_LABELS,
   type Kana,
   type KanaSet,
+  type Script,
 } from "@/lib/hiragana"
 import { cn } from "@/lib/utils"
 
-const kanaN = HIRAGANA.find((h) => h.column === "n-syllabic")!
-
 interface KanaGridProps {
   set?: KanaSet
+  script?: Script
   renderKana: (kana: Kana) => React.ReactNode
   className?: string
 }
 
 /**
  * Gojūon-style layout for one kana set: consonant columns (行) on the x-axis,
- * vowel rows (段) on the y-axis; the basic set adds a final column for ん.
+ * vowel rows (段) on the y-axis; the basic set adds a final column for ん/ン.
  */
-export function KanaGrid({ set = "basic", renderKana, className }: KanaGridProps) {
+export function KanaGrid({
+  set = "basic",
+  script = "hiragana",
+  renderKana,
+  className,
+}: KanaGridProps) {
   const def = GRID_DEFS[set]
+  const kanaN = SCRIPT_SETS[script].basic.find((k) => k.column === "n-syllabic")!
   const columnCount = def.columns.length + (def.includeN ? 1 : 0)
 
   return (
@@ -49,7 +55,7 @@ export function KanaGrid({ set = "basic", renderKana, className }: KanaGridProps
             role="columnheader"
             className="pb-1 text-center font-mono text-xs text-muted-foreground"
           >
-            ん
+            {kanaN.kana}
           </div>
         )}
         {def.vowels.map((vowel, rowIndex) => (
@@ -61,7 +67,7 @@ export function KanaGrid({ set = "basic", renderKana, className }: KanaGridProps
               {vowel}
             </div>
             {def.columns.map((column) => {
-              const kana = findKana(column, vowel)
+              const kana = findKana(column, vowel, script)
               return kana ? (
                 <div role="cell" key={column}>
                   {renderKana(kana)}

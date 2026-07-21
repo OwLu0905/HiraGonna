@@ -16,9 +16,21 @@ import {
   SidebarMenuItem,
 } from "@/components/ui/sidebar"
 
-const hiraganaItems = [
-  { title: "練習", href: "/hiragana/practice", icon: Pencil },
-  { title: "五十音表", href: "/hiragana/chart", icon: Table2 },
+const groups = [
+  {
+    label: "Hiragana",
+    items: [
+      { title: "練習", href: "/hiragana/practice", icon: Pencil },
+      { title: "五十音表", href: "/hiragana/chart", icon: Table2 },
+    ],
+  },
+  {
+    label: "Katakana",
+    items: [
+      { title: "練習", href: "/katakana/practice", icon: Pencil },
+      { title: "五十音表", href: "/katakana/chart", icon: Table2 },
+    ],
+  },
 ]
 
 export function AppSidebar() {
@@ -35,24 +47,26 @@ export function AppSidebar() {
         </div>
       </SidebarHeader>
       <SidebarContent>
-        <SidebarGroup>
-          <SidebarGroupLabel>Hiragana</SidebarGroupLabel>
-          <SidebarGroupContent>
-            <SidebarMenu>
-              {hiraganaItems.map((item) => (
-                <SidebarMenuItem key={item.href}>
-                  <SidebarMenuButton
-                    isActive={pathname === item.href}
-                    render={<Link href={item.href} />}
-                  >
-                    <item.icon />
-                    <span>{item.title}</span>
-                  </SidebarMenuButton>
-                </SidebarMenuItem>
-              ))}
-            </SidebarMenu>
-          </SidebarGroupContent>
-        </SidebarGroup>
+        {groups.map((group) => (
+          <SidebarGroup key={group.label}>
+            <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {group.items.map((item) => (
+                  <SidebarMenuItem key={item.href}>
+                    <SidebarMenuButton
+                      isActive={pathname === item.href}
+                      render={<Link href={item.href} />}
+                    >
+                      <item.icon />
+                      <span>{item.title}</span>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
       </SidebarContent>
     </Sidebar>
   )

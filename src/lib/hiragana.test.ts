@@ -11,10 +11,12 @@ import {
   GRID_DEFS,
   HIRAGANA,
   isCorrectAnswer,
+  KATAKANA_SETS,
   normalizeAnswer,
   randomFont,
   shuffle,
   speedBucket,
+  toKatakana,
   VOICED,
 } from "@/lib/hiragana"
 
@@ -44,6 +46,38 @@ describe("HIRAGANA data", () => {
     expect(findKana("w", "e")).toBeUndefined()
     expect(findKana("y", "a")?.kana).toBe("や")
     expect(findKana("w", "o")?.kana).toBe("を")
+  })
+})
+
+describe("KATAKANA data (derived from hiragana)", () => {
+  test("toKatakana shifts hiragana to katakana, including small kana", () => {
+    expect(toKatakana("あ")).toBe("ア")
+    expect(toKatakana("きゃ")).toBe("キャ")
+    expect(toKatakana("shi")).toBe("shi")
+  })
+
+  test("mirrors hiragana sets glyph-for-glyph with the same readings", () => {
+    expect(KATAKANA_SETS.basic).toHaveLength(46)
+    expect(KATAKANA_SETS.voiced).toHaveLength(25)
+    expect(KATAKANA_SETS.contracted).toHaveLength(33)
+    const shi = KATAKANA_SETS.basic.find((k) => k.kana === "シ")!
+    expect(shi.romaji).toBe("shi")
+    expect(shi.script).toBe("katakana")
+    expect(shi.column).toBe("s")
+  })
+
+  test("findKana resolves katakana table positions", () => {
+    expect(findKana("y", "a", "katakana")?.kana).toBe("ヤ")
+    expect(findKana("", "a", "katakana")?.kana).toBe("ア")
+    expect(findKana("y", "i", "katakana")).toBeUndefined()
+  })
+
+  test("katakana questions accept romaji, katakana, or hiragana input", () => {
+    const shi = KATAKANA_SETS.basic.find((k) => k.kana === "シ")!
+    expect(isCorrectAnswer(shi, "shi")).toBe(true)
+    expect(isCorrectAnswer(shi, "シ")).toBe(true)
+    expect(isCorrectAnswer(shi, "し")).toBe(true)
+    expect(isCorrectAnswer(shi, "chi")).toBe(false)
   })
 })
 
