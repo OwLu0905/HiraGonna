@@ -11,6 +11,8 @@ import {
   GRID_DEFS,
   HIRAGANA,
   isCorrectAnswer,
+  KANA_SETS,
+  kanaByGlyph,
   KATAKANA_SETS,
   normalizeAnswer,
   randomFont,
@@ -18,6 +20,7 @@ import {
   speedBucket,
   toKatakana,
   VOICED,
+  type KanaSet,
 } from "@/lib/hiragana"
 
 describe("HIRAGANA data", () => {
@@ -81,6 +84,58 @@ describe("KATAKANA data (derived from hiragana)", () => {
   })
 })
 
+describe("EXTENDED katakana (外来語音)", () => {
+  test("26 extended sounds, katakana-only", () => {
+    expect(KATAKANA_SETS.extended).toHaveLength(26)
+    expect(KATAKANA_SETS.extended.every((k) => k.script === "katakana")).toBe(true)
+    expect(KANA_SETS.extended).toHaveLength(0)
+  })
+
+  test("every extended grid position resolves within the set", () => {
+    const def = GRID_DEFS.extended
+    const covered = def.columns.flatMap((column) =>
+      def.vowels.map((vowel) => findKana(column, vowel, "katakana", "extended"))
+    ).filter((kana) => kana !== undefined)
+    expect(covered).toHaveLength(KATAKANA_SETS.extended.length)
+    expect(covered.every((k) => k?.set === "extended")).toBe(true)
+  })
+
+  test("reused columns (sh/j/ch/y) never leak into other sets' grids", () => {
+    // イェ sits at (y, e) — a gap in the basic grid, which must stay empty.
+    expect(findKana("y", "e", "katakana", "basic")).toBeUndefined()
+    expect(findKana("y", "e", "katakana", "extended")?.kana).toBe("イェ")
+    expect(findKana("sh", "e", "katakana", "contracted")).toBeUndefined()
+    expect(findKana("sh", "e", "katakana", "extended")?.kana).toBe("シェ")
+  })
+
+  test("accepts IME spellings", () => {
+    const ti = KATAKANA_SETS.extended.find((k) => k.kana === "ティ")!
+    const wi = KATAKANA_SETS.extended.find((k) => k.kana === "ウィ")!
+    const vu = KATAKANA_SETS.extended.find((k) => k.kana === "ヴ")!
+    expect(isCorrectAnswer(ti, "ti")).toBe(true)
+    expect(isCorrectAnswer(ti, "thi")).toBe(true)
+    expect(isCorrectAnswer(wi, "whi")).toBe(true)
+    expect(isCorrectAnswer(vu, "vu")).toBe(true)
+    expect(isCorrectAnswer(vu, "ヴ")).toBe(true)
+  })
+
+  test("choice mode draws distractors from the extended set", () => {
+    const fa = KATAKANA_SETS.extended.find((k) => k.kana === "ファ")!
+    const choices = buildChoices(fa, 6, () => 0.5)
+    expect(choices).toHaveLength(6)
+    expect(choices).toContain("fa")
+    expect(new Set(choices).size).toBe(6)
+    const extendedReadings = new Set(KATAKANA_SETS.extended.map((k) => k.romaji))
+    expect(choices.every((romaji) => extendedReadings.has(romaji))).toBe(true)
+  })
+
+  test("kanaByGlyph resolves glyphs per script", () => {
+    expect(kanaByGlyph("ヴ", "katakana")?.romaji).toBe("vu")
+    expect(kanaByGlyph("あ", "hiragana")?.romaji).toBe("a")
+    expect(kanaByGlyph("ヴ", "hiragana")).toBeUndefined()
+  })
+})
+
 describe("VOICED and CONTRACTED data", () => {
   test("25 voiced/semi-voiced and 33 contracted kana", () => {
     expect(VOICED).toHaveLength(25)
@@ -92,18 +147,26 @@ describe("VOICED and CONTRACTED data", () => {
   })
 
   test("every grid position resolves within its own set", () => {
-    for (const [set, def] of Object.entries(GRID_DEFS)) {
+    // Lookups are set-scoped, matching KanaGrid: the extended set reuses
+    // column keys (sh/j/ch/y), so unscoped lookups would cross sets.
+    for (const [set, def] of Object.entries(GRID_DEFS) as [
+      KanaSet,
+      (typeof GRID_DEFS)[KanaSet],
+    ][]) {
       for (const column of def.columns) {
         for (const vowel of def.vowels) {
-          const kana = findKana(column, vowel)
+          const kana = findKana(column, vowel, "hiragana", set)
           if (kana) expect(kana.set).toBe(set)
         }
       }
     }
-    // Grids (plus ん) cover every kana exactly once.
-    const covered = Object.values(GRID_DEFS).flatMap((def) =>
+    // Grids (plus ん) cover every hiragana exactly once.
+    const covered = (Object.entries(GRID_DEFS) as [
+      KanaSet,
+      (typeof GRID_DEFS)[KanaSet],
+    ][]).flatMap(([set, def]) =>
       def.columns.flatMap((column) =>
-        def.vowels.map((vowel) => findKana(column, vowel))
+        def.vowels.map((vowel) => findKana(column, vowel, "hiragana", set))
       )
     ).filter((kana) => kana !== undefined)
     expect(covered).toHaveLength(ALL_KANA.length - 1)

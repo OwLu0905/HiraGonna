@@ -1,5 +1,6 @@
 import { create } from "zustand"
 
+import { useHistoryStore } from "@/lib/history-store"
 import {
   buildChoices,
   HIRAGANA,
@@ -92,18 +93,17 @@ export const usePracticeStore = create<PracticeState>()((set, get) => ({
     const { phase, deck, fonts, currentIndex, answers, questionShownAt } = get()
     if (phase !== "question" || questionShownAt === null) return
     const kana = deck[currentIndex]
+    const answer: AnswerRecord = {
+      kana,
+      input,
+      correct: isCorrectAnswer(kana, input),
+      timeMs: now - questionShownAt,
+      font: fonts[currentIndex],
+    }
+    useHistoryStore.getState().record(answer, now)
     set({
       phase: "revealed",
-      answers: [
-        ...answers,
-        {
-          kana,
-          input,
-          correct: isCorrectAnswer(kana, input),
-          timeMs: now - questionShownAt,
-          font: fonts[currentIndex],
-        },
-      ],
+      answers: [...answers, answer],
       questionShownAt: null,
     })
   },

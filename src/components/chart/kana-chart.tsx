@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import {
   FONT_LABELS,
   SCRIPT_LABELS,
+  SCRIPT_SETS,
   SET_LABELS,
   type KanaFont,
   type KanaSet,
@@ -45,7 +46,9 @@ export function KanaChart({ script = "hiragana" }: { script?: Script }) {
           </div>
         </div>
         <div className="flex flex-col gap-8">
-          {(Object.keys(SET_LABELS) as KanaSet[]).map((set) => (
+          {(Object.keys(SET_LABELS) as KanaSet[])
+            .filter((set) => SCRIPT_SETS[script][set].length > 0)
+            .map((set) => (
             <section key={set} className="flex flex-col gap-1.5">
               <h3 className="text-sm font-medium text-muted-foreground">
                 {SET_LABELS[set]}

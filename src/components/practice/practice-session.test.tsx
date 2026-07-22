@@ -3,12 +3,14 @@ import userEvent from "@testing-library/user-event"
 import { beforeEach, describe, expect, test } from "vitest"
 
 import { PracticeSession } from "@/components/practice/practice-session"
+import { useHistoryStore } from "@/lib/history-store"
 import { usePracticeStore } from "@/lib/practice-store"
 
 beforeEach(() => {
   usePracticeStore.getState().reset()
   // mode is a sticky preference (survives reset); pin it for test isolation
   usePracticeStore.setState({ mode: "typing" })
+  useHistoryStore.getState().clear()
 })
 
 function currentKana() {
@@ -251,5 +253,42 @@ describe("practice flow", () => {
 
     await user.click(screen.getByRole("button", { name: /再練習一次/ }))
     expect(screen.getByText("已回答 0 / 46")).toBeInTheDocument()
+  })
+
+  test("a wrong answer surfaces the history weak-point deck on the start screen", async () => {
+    const user = userEvent.setup()
+    render(<PracticeSession />)
+
+    expect(
+      screen.queryByRole("button", { name: /練歷史弱點/ })
+    ).not.toBeInTheDocument()
+
+    await user.click(screen.getByRole("button", { name: /開始練習/ }))
+    await user.keyboard("wrong-answer{Enter}")
+    await user.click(screen.getByRole("button", { name: /結束 Session/ }))
+    await user.click(screen.getByRole("button", { name: "回到開始" }))
+
+    const weakButton = screen.getByRole("button", { name: /練歷史弱點（1）/ })
+    await user.click(weakButton)
+    expect(screen.getByText("已回答 0 / 1")).toBeInTheDocument()
+  })
+
+  test("katakana start screen offers the extended set, hiragana does not", async () => {
+    const { unmount } = render(<PracticeSession />)
+    expect(
+      screen.queryByRole("button", { name: /外来語音/ })
+    ).not.toBeInTheDocument()
+    unmount()
+
+    const user = userEvent.setup()
+    render(<PracticeSession script="katakana" />)
+    await user.click(screen.getByRole("button", { name: /^清音/ }))
+    await user.click(screen.getByRole("button", { name: /外来語音（26）/ }))
+    await user.click(screen.getByRole("button", { name: /開始練習（26 題）/ }))
+
+    expect(screen.getByText("已回答 0 / 26")).toBeInTheDocument()
+    expect(
+      usePracticeStore.getState().deck.every((k) => k.set === "extended")
+    ).toBe(true)
   })
 })

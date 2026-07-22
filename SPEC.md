@@ -58,3 +58,21 @@
     - 有輸入框的畫面：輸入框保持在**畫面上半部**，且**任何高度下整欄都不可溢出容器**——假名區用 `shrink`（絕不用 `flex-1` 長大），整欄頂部錨定；鍵盤壓縮 app 時只吃掉輸入框下方的空白，上方內容一個 px 都不動。
     - 反例（勿重蹈）：底部 dock 輸入列（聚焦瞬間必觸發瀏覽器先捲）、輸入框上方放會長大的彈性區（把輸入框推低）。
 
+## 片假名（2026-07-21 實作完成）
+
+- 資料從平假名一比一推導（Unicode +0x60 位移），加 `script` 維度貫穿 lib／grid／chart／practice；路由 `/katakana/practice`、`/katakana/chart`。
+- 答案判定兩邊都正規化：片假名題目接受羅馬拼音、片假名、平假名（反向亦然）。
+- 總表「再練習一次」改為重練同一副牌（原本會退回平假名清音）。
+
+## 外来語音＋歷史紀錄（2026-07-21 實作完成）
+
+- 外来語音（extended set，片假名限定，26 個）：ヴ行、ファ行、ツァ行、シェ／ジェ／チェ、ティ／ディ／デュ、トゥ／ドゥ、フュ、ウィ／ウェ／ウォ、イェ。
+    - 欄位鍵同時是 IME 前綴（th+i=ティ、wh+i=ウィ），alternates 收 IME 拼法。
+    - シェ／ジェ／チェ／イェ 重用既有欄位鍵在該 set 空著的母音列，因此 grid 查詢改為 **set 內查詢**（`findKana` 加 `set` 參數）——不然 イェ 會漏進清音表的 や行え段空格。
+    - 平假名側 extended 為空陣列（兩 script 共用 KanaSet 形狀），開始畫面與五十音表都過濾掉空 set。
+    - 選擇模式干擾項改從 `SCRIPT_SETS[script][set]` 取（原本取平假名 KANA_SETS，extended 會拿到空池）。
+- 跨 session 歷史紀錄（localStorage，zustand persist，key `hiragonna-history`）：
+    - 每次送出答案即記錄（含中途結束的 session），每個假名保留最近 10 筆。
+    - 弱點定義：最近 3 筆有答錯，或最近 3 筆平均時間落在紅色（>4s）區。
+    - 開始畫面顯示「練歷史弱點（n）」按鈕，只取當前 script 的弱點字。
+    - Hydration：歷史資料只在 client 掛載後渲染（`useSyncExternalStore` 判斷），避免與無 storage 的 server render 不一致。

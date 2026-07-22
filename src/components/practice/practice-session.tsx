@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { ArrowRight, Check, CircleStop, Play, X } from "lucide-react";
+import { ArrowRight, Check, CircleStop, Crosshair, Play, X } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -9,12 +9,14 @@ import { Input } from "@/components/ui/input";
 import { Progress } from "@/components/ui/progress";
 import { SummaryHeatmap } from "@/components/practice/summary-heatmap";
 import {
+  kanaByGlyph,
   SCRIPT_LABELS,
   SCRIPT_SETS,
   SET_LABELS,
   type KanaSet,
   type Script,
 } from "@/lib/hiragana";
+import { useHistoryStore, weakGlyphs } from "@/lib/history-store";
 import { usePracticeStore, type PracticeMode } from "@/lib/practice-store";
 import { cn } from "@/lib/utils";
 
@@ -42,17 +44,34 @@ const SCRIPT_SAMPLES: Record<Script, string> = {
   katakana: "アイウエオ",
 };
 
+const subscribeNoop = () => () => {};
+
 function StartScreen({ script }: { script: Script }) {
   const start = usePracticeStore((s) => s.start);
+  const byKana = useHistoryStore((s) => s.byKana);
   const [selected, setSelected] = React.useState<KanaSet[]>(["basic"]);
   const [mode, setMode] = React.useState<PracticeMode>(
     () => usePracticeStore.getState().mode,
   );
 
-  const kanaSets = SCRIPT_SETS[script];
-  const deck = ALL_SETS.filter((s) => selected.includes(s)).flatMap(
-    (s) => kanaSets[s],
+  // History lives in localStorage; render it only after hydration so the
+  // first client render matches the (storage-less) server render.
+  const hydrated = React.useSyncExternalStore(
+    subscribeNoop,
+    () => true,
+    () => false,
   );
+  const weakDeck = hydrated
+    ? weakGlyphs(byKana)
+        .map((glyph) => kanaByGlyph(glyph, script))
+        .filter((kana) => kana !== undefined)
+    : [];
+
+  const kanaSets = SCRIPT_SETS[script];
+  const availableSets = ALL_SETS.filter((s) => kanaSets[s].length > 0);
+  const deck = availableSets
+    .filter((s) => selected.includes(s))
+    .flatMap((s) => kanaSets[s]);
 
   function toggle(set: KanaSet) {
     setSelected((prev) =>
@@ -76,7 +95,7 @@ function StartScreen({ script }: { script: Script }) {
           {SCRIPT_SAMPLES[script]}
         </p>
         <div className="flex flex-wrap justify-center gap-2">
-          {ALL_SETS.map((set) => (
+          {availableSets.map((set) => (
             <Button
               key={set}
               size="sm"
@@ -116,14 +135,26 @@ function StartScreen({ script }: { script: Script }) {
           ))}
         </div>
         <div className="flex flex-col items-center gap-1.5">
-          <Button
-            size="lg"
-            disabled={deck.length === 0}
-            onClick={() => start({ deck, mode })}
-          >
-            <Play data-icon="inline-start" />
-            開始練習（{deck.length} 題）
-          </Button>
+          <div className="flex flex-wrap justify-center gap-2">
+            <Button
+              size="lg"
+              disabled={deck.length === 0}
+              onClick={() => start({ deck, mode })}
+            >
+              <Play data-icon="inline-start" />
+              開始練習（{deck.length} 題）
+            </Button>
+            {weakDeck.length > 0 && (
+              <Button
+                size="lg"
+                variant="secondary"
+                onClick={() => start({ deck: weakDeck, mode })}
+              >
+                <Crosshair data-icon="inline-start" />
+                練歷史弱點（{weakDeck.length}）
+              </Button>
+            )}
+          </div>
           {deck.length === 0 && (
             <p className="text-xs text-muted-foreground">請至少選擇一個範圍</p>
           )}

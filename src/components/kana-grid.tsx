@@ -67,7 +67,7 @@ export function KanaGrid({
               {vowel}
             </div>
             {def.columns.map((column) => {
-              const kana = findKana(column, vowel, script)
+              const kana = findKana(column, vowel, script, set)
               return kana ? (
                 <div role="cell" key={column}>
                   {renderKana(kana)}

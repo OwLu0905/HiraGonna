@@ -7,12 +7,13 @@ export const SCRIPT_LABELS: Record<Script, string> = {
   katakana: "片假名",
 }
 
-export type KanaSet = "basic" | "voiced" | "contracted"
+export type KanaSet = "basic" | "voiced" | "contracted" | "extended"
 
 export const SET_LABELS: Record<KanaSet, string> = {
   basic: "清音",
   voiced: "濁音・半濁音",
   contracted: "拗音",
+  extended: "外来語音",
 }
 
 export interface Kana {
@@ -165,9 +166,55 @@ export const KANA_SETS: Record<KanaSet, Kana[]> = {
   basic: HIRAGANA,
   voiced: VOICED,
   contracted: CONTRACTED,
+  // Extended (外来語) sounds are katakana-only; empty here so both scripts
+  // share the KanaSet shape and UIs can filter empty sets out.
+  extended: [],
 }
 
 export const ALL_KANA: Kana[] = [...HIRAGANA, ...VOICED, ...CONTRACTED]
+
+const e = (
+  kana: string,
+  romaji: string,
+  column: string,
+  vowel: VowelRow,
+  alternates: string[] = []
+): Kana => ({ kana, romaji, alternates, column, vowel, set: "extended", script: "katakana" })
+
+/**
+ * The 26 extended katakana (外来語音) with no hiragana counterpart. Column
+ * keys double as IME prefixes (th + i = ティ); alternates cover IME spellings.
+ * シェ・ジェ・チェ・イェ reuse existing columns at vowel rows those columns
+ * leave empty, so grid lookups stay unambiguous per set.
+ */
+export const EXTENDED_KATAKANA: Kana[] = [
+  e("ヴァ", "va", "v", "a"),
+  e("ヴィ", "vi", "v", "i"),
+  e("ヴ", "vu", "v", "u"),
+  e("ヴェ", "ve", "v", "e"),
+  e("ヴォ", "vo", "v", "o"),
+  e("ファ", "fa", "f", "a"),
+  e("フィ", "fi", "f", "i"),
+  e("フェ", "fe", "f", "e"),
+  e("フォ", "fo", "f", "o"),
+  e("ツァ", "tsa", "ts", "a"),
+  e("ツィ", "tsi", "ts", "i"),
+  e("ツェ", "tse", "ts", "e"),
+  e("ツォ", "tso", "ts", "o"),
+  e("シェ", "she", "sh", "e", ["sye"]),
+  e("ジェ", "je", "j", "e", ["jye", "zye"]),
+  e("チェ", "che", "ch", "e", ["tye", "cye"]),
+  e("ティ", "ti", "th", "i", ["thi"]),
+  e("ディ", "di", "dh", "i", ["dhi"]),
+  e("デュ", "dyu", "dh", "u", ["dhu"]),
+  e("トゥ", "tu", "tw", "u", ["twu"]),
+  e("ドゥ", "du", "dw", "u", ["dwu"]),
+  e("フュ", "fyu", "fy", "u"),
+  e("ウィ", "wi", "wh", "i", ["whi"]),
+  e("ウェ", "we", "wh", "e", ["whe"]),
+  e("ウォ", "wo", "wh", "o", ["who"]),
+  e("イェ", "ye", "y", "e"),
+]
 
 /** ぁ-ゖ → ァ-ヶ (the two blocks share layout at a fixed +0x60 offset). */
 export function toKatakana(text: string): string {
@@ -182,6 +229,7 @@ export const KATAKANA_SETS: Record<KanaSet, Kana[]> = {
   basic: deriveKatakana(HIRAGANA),
   voiced: deriveKatakana(VOICED),
   contracted: deriveKatakana(CONTRACTED),
+  extended: EXTENDED_KATAKANA,
 }
 
 export const SCRIPT_SETS: Record<Script, Record<KanaSet, Kana[]>> = {
@@ -191,7 +239,12 @@ export const SCRIPT_SETS: Record<Script, Record<KanaSet, Kana[]>> = {
 
 const ALL_BY_SCRIPT: Record<Script, Kana[]> = {
   hiragana: ALL_KANA,
-  katakana: deriveKatakana(ALL_KANA),
+  katakana: [...deriveKatakana(ALL_KANA), ...EXTENDED_KATAKANA],
+}
+
+/** Looks up a kana by its glyph (glyphs are unique within a script). */
+export function kanaByGlyph(glyph: string, script: Script): Kana | undefined {
+  return ALL_BY_SCRIPT[script].find((k) => k.kana === glyph)
 }
 
 /** Gojūon table axes: columns are consonant rows (行), rows are vowels (段). */
@@ -227,15 +280,28 @@ export const GRID_DEFS: Record<KanaSet, KanaGridDef> = {
     vowels: ["a", "u", "o"],
     includeN: false,
   },
+  extended: {
+    columns: ["v", "f", "ts", "sh", "j", "ch", "th", "dh", "tw", "dw", "fy", "wh", "y"],
+    headers: ["v", "f", "ts", "sh", "j", "ch", "th", "dh", "tw", "dw", "fy", "wh", "y"],
+    vowels: GOJUON_VOWELS,
+    includeN: false,
+  },
 }
 
-/** Looks up a kana by table position (columns are unique across all sets). */
+/**
+ * Looks up a kana by table position. Pass `set` to scope the search — the
+ * extended set reuses some column keys (sh/j/ch/y) at vowel rows their own
+ * sets leave empty, so an unscoped search across a whole script would let
+ * e.g. イェ surface in the basic grid's empty や行え段 cell.
+ */
 export function findKana(
   column: string,
   vowel: VowelRow,
-  script: Script = "hiragana"
+  script: Script = "hiragana",
+  set?: KanaSet
 ): Kana | undefined {
-  return ALL_BY_SCRIPT[script].find((h) => h.column === column && h.vowel === vowel)
+  const pool = set ? SCRIPT_SETS[script][set] : ALL_BY_SCRIPT[script]
+  return pool.find((h) => h.column === column && h.vowel === vowel)
 }
 
 /** trim, fullwidth latin/digits → halfwidth, lowercase, katakana → hiragana. */
@@ -285,7 +351,9 @@ export function buildChoices(
   count = 6,
   random: () => number = Math.random
 ): string[] {
-  const pool = KANA_SETS[kana.set].filter((k) => k.romaji !== kana.romaji)
+  const pool = SCRIPT_SETS[kana.script][kana.set].filter(
+    (k) => k.romaji !== kana.romaji
+  )
   const near = pool.filter(
     (k) =>
       k.column === kana.column || (k.vowel !== null && k.vowel === kana.vowel)

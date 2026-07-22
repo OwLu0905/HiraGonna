@@ -33,6 +33,19 @@ describe("KanaChart", () => {
     expect(screen.queryByText("あ")).not.toBeInTheDocument()
   })
 
+  test("extended sounds appear only in the katakana chart", () => {
+    const { unmount } = render(<KanaChart script="katakana" />)
+    expect(screen.getByText("外来語音")).toBeInTheDocument()
+    for (const { kana } of KATAKANA_SETS.extended) {
+      expect(screen.getByText(kana)).toBeInTheDocument()
+    }
+    unmount()
+
+    render(<KanaChart />)
+    expect(screen.queryByText("外来語音")).not.toBeInTheDocument()
+    expect(screen.queryByText("ヴ")).not.toBeInTheDocument()
+  })
+
   test("toggles between Kyōkasho and Mincho fonts and marks the current one", async () => {
     const user = userEvent.setup()
     render(<KanaChart />)
